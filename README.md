@@ -21,3 +21,5 @@ Using write_eeprom_strings has the following advantages:
 7. Load and run your own Sketch, which will read its configuration strings from EEPROM.
 8. Repeat steps 5 through 7 for each Arduino you wish to program.
 9. Enjoy the knowledge that your Sketch is now easily configurable!
+
+See the examples folder for a simple example of reading EEPROM strings that were written by write_eeprom_strings.
