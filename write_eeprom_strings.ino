@@ -17,8 +17,8 @@
  * To change what address the Sketch writes in EEPROM,
  * change START_ADDRESS.
  * 
- * Copyright (c) 2015 Bradford Needham
- * (@bneedhamia, https://www.needhamia.com)
+ * Copyright (c) 2015, 2016 Bradford Needham
+ * @bneedhamia, https://www.needhamia.com
  * Licensed under The MIT License (MIT)
  * a version of which should be supplied with this file.
  */
@@ -78,7 +78,6 @@ void setup() {
 
 void loop() {
   char ch = 0;
-  int i;
   
   switch (currentState) {
   case PROMPT:
@@ -194,7 +193,7 @@ void loop() {
  * Return true if successful; false otherwise.
  */
 boolean addToEEPROM(char *text) {
-  if (nextEEPROMaddress + strlen(text) + 1 > EEPROM.length()) {
+  if (nextEEPROMaddress + (int) strlen(text) + 1 > EEPROM.length()) {
     Serial.print(F("ERROR: string would overflow EEPROM length of "));
     Serial.print(EEPROM.length());
     Serial.println(F(" bytes."));
