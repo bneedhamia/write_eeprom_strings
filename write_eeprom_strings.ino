@@ -17,7 +17,7 @@
  * To change what address the Sketch writes in EEPROM,
  * change START_ADDRESS.
  * 
- * Copyright (c) 2015, 2016 Bradford Needham
+ * Copyright (c) 2015, 2016, 2017 Bradford Needham
  * @bneedhamia, https://www.needhamia.com
  * Licensed under The MIT License (MIT)
  * a version of which should be supplied with this file.
@@ -29,13 +29,16 @@ const int START_ADDRESS = 0;
 
 // The names of the strings to put into EEPROM, in order.  Null ends the strings.
 const char *STRING_NAME[] = {
-  "WiFi SSID",
-  "WiFi Password",
+  "SSID",
+  "Password",
   0
 };
 
 // marks the end of the data we wrote to EEPROM
 const byte EEPROM_END_MARK = 255;
+
+// Maximum bytes (including null) of any string we support.
+const int EEPROM_MAX_STRING_LENGTH = 120;
 
 // The state machine that drives the loop.
 enum state {
@@ -54,8 +57,7 @@ int nextEEPROMaddress;
 int numberOfStrings;
 
 // The buffer that holds the string being read from the user.
-const int BUF_LENGTH = 120;
-char buf[BUF_LENGTH];
+char buf[EEPROM_MAX_STRING_LENGTH];
 int nextIndex;              // index of the next empty space in buf[] to fill.
 
 // if null, we're waiting for the y or n. Otherwise, we're waiting for the end of line.
@@ -96,7 +98,7 @@ void loop() {
     }
     buf[nextIndex] = Serial.read();
 
-    if (buf[nextIndex] != '\n' && nextIndex < BUF_LENGTH - 1) {
+    if (buf[nextIndex] != '\n' && nextIndex < EEPROM_MAX_STRING_LENGTH - 1) {
       ++nextIndex;
       return;
     }
@@ -163,7 +165,7 @@ void loop() {
     if (STRING_NAME[numberOfStrings] == (char *) 0) {
 
       // Write an "end of strings" marker
-      EEPROM.update(nextEEPROMaddress++, EEPROM_END_MARK);
+      EEPROM.write(nextEEPROMaddress++, EEPROM_END_MARK);
       
       Serial.print(F("Used "));
       Serial.print(nextEEPROMaddress - START_ADDRESS);
@@ -193,20 +195,23 @@ void loop() {
  * Return true if successful; false otherwise.
  */
 boolean addToEEPROM(char *text) {
-  if (nextEEPROMaddress + (int) strlen(text) + 1 > EEPROM.length()) {
-    Serial.print(F("ERROR: string would overflow EEPROM length of "));
-    Serial.print(EEPROM.length());
-    Serial.println(F(" bytes."));
-    return false;
-  }
+  // Unfortunately, we can't know how much EEPROM is left.
+
+#if defined(ESP8266)
+  /*
+   * The ESP8266 EEPROM library differs from the standard Arduino library.
+   * It is a cached model, I assume to minimize limited EEPROM write cycles.
+   */
+  EEPROM.begin(512);
+#endif
 
   do {
-    /*
-     * We use update() rather than write() to avoid
-     * needlessly using up the limited number of EEPROM write cycles.
-     */
-    EEPROM.update(nextEEPROMaddress++, (byte) *text);
+    EEPROM.write(nextEEPROMaddress++, (byte) *text);
   } while (*text++ != '\0');
+
+#if defined(ESP8266)
+  EEPROM.end();
+#endif
 
   Serial.println(F("Written to EEPROM."));
 
@@ -225,7 +230,7 @@ void readEEPROM() {
   Serial.println();
   Serial.print(F("EEPROM Contents starting at address "));
   Serial.println(START_ADDRESS);
-    
+
   i = 0;
   while (true) {
     s = readEEPROMString(START_ADDRESS, i++);
@@ -260,17 +265,27 @@ char *readEEPROMString(int baseAddress, int stringNumber) {
   char *result;     // points to the dynamically-allocated result to return.
   int i;
 
+
+#if defined(ESP8266)
+  EEPROM.begin(512);
+#endif
+
   nextAddress = START_ADDRESS;
   for (i = 0; i < stringNumber; ++i) {
 
     // If the first byte is an end mark, we've run out of strings too early.
     ch = (char) EEPROM.read(nextAddress++);
-    if (ch == (char) EEPROM_END_MARK || nextAddress >= EEPROM.length()) {
+    if (ch == (char) EEPROM_END_MARK) {
+#if defined(ESP8266)
+      EEPROM.end();
+#endif
       return (char *) 0;  // not enough strings are in EEPROM.
     }
 
     // Read through the string's terminating null (0).
-    while (ch != '\0' && nextAddress < EEPROM.length()) {
+    int length = 0;
+    while (ch != '\0' && length < EEPROM_MAX_STRING_LENGTH - 1) {
+      ++length;
       ch = EEPROM.read(nextAddress++);
     }
   }
@@ -281,12 +296,15 @@ char *readEEPROMString(int baseAddress, int stringNumber) {
   // If the first byte is an end mark, we've run out of strings too early.
   ch = (char) EEPROM.read(nextAddress++);
   if (ch == (char) EEPROM_END_MARK) {
+#if defined(ESP8266)
+    EEPROM.end();
+#endif
     return (char *) 0;  // not enough strings are in EEPROM.
   }
 
   // Count to the end of this string.
   length = 0;
-  while (ch != '\0' && nextAddress < EEPROM.length()) {
+  while (ch != '\0' && length < EEPROM_MAX_STRING_LENGTH - 1) {
     ++length;
     ch = EEPROM.read(nextAddress++);
   }
