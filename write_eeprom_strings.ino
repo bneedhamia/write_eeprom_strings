@@ -197,10 +197,11 @@ void loop() {
 boolean addToEEPROM(char *text) {
   // Unfortunately, we can't know how much EEPROM is left.
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
   /*
-   * The ESP8266 EEPROM library differs from the standard Arduino library.
-   * It is a cached model, I assume to minimize limited EEPROM write cycles.
+   * The ESP8266 and ESP32 EEPROM library differs from
+   * the standard Arduino library. It is a cached model,
+   * I assume to minimize limited EEPROM write cycles.
    */
   EEPROM.begin(512);
 #endif
@@ -209,7 +210,7 @@ boolean addToEEPROM(char *text) {
     EEPROM.write(nextEEPROMaddress++, (byte) *text);
   } while (*text++ != '\0');
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
   EEPROM.end();
 #endif
 
@@ -266,7 +267,7 @@ char *readEEPROMString(int baseAddress, int stringNumber) {
   int i;
 
 
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
   EEPROM.begin(512);
 #endif
 
@@ -276,9 +277,10 @@ char *readEEPROMString(int baseAddress, int stringNumber) {
     // If the first byte is an end mark, we've run out of strings too early.
     ch = (char) EEPROM.read(nextAddress++);
     if (ch == (char) EEPROM_END_MARK) {
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
       EEPROM.end();
 #endif
+
       return (char *) 0;  // not enough strings are in EEPROM.
     }
 
@@ -296,7 +298,7 @@ char *readEEPROMString(int baseAddress, int stringNumber) {
   // If the first byte is an end mark, we've run out of strings too early.
   ch = (char) EEPROM.read(nextAddress++);
   if (ch == (char) EEPROM_END_MARK) {
-#if defined(ESP8266)
+#if defined(ESP8266) || defined(ESP32)
     EEPROM.end();
 #endif
     return (char *) 0;  // not enough strings are in EEPROM.
