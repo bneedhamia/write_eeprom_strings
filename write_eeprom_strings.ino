@@ -31,6 +31,7 @@ const int START_ADDRESS = 0;
 const char *STRING_NAME[] = {
   "SSID",
   "Password",
+  "Timeout(seconds)",
   0
 };
 
@@ -65,6 +66,7 @@ char yOrN;
 
 void setup() {
   Serial.begin(9600);
+  delay(200);  // give the uart time to power up
   Serial.println(F("RESET"));
 
   numberOfStrings = 0;
